@@ -10,6 +10,8 @@ uniform sampler2D text;
 
 void main()
 {
-    vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, TexCoords).r);
-    color = vec4(textColor, 1.0) * sampled;
+    //vec4 sampled = vec4(1.0, 1.0, 1.0, 1.0);
+    vec4 bg_color = vec4(0,1,1,1);
+    color = vec4(mix(bg_color.xyz,textColor.xyz,texture(text, TexCoords).r),1.0);
+
 }

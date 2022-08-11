@@ -14,14 +14,6 @@ struct float_array{
 
 /// Holds all state information relevant to a character as loaded using FreeType
 struct character {
-  float ax; // advance.x
-  float ay; // advance.y
-
-  float bw; // bitmap.width;
-  float bh; // bitmap.rows;
-
-  float bl; // bitmap_left;
-  float bt; // bitmap_top;
 
   float tx; // x offset of glyph in texture coordinates
 };
@@ -140,16 +132,26 @@ int main()
         FT_GlyphSlot g = face->glyph;
         int w = 0;
         int h = 0;
+
+        int max_above, max_below;
+
+        max_above=0;
+        max_below=0;
         characters=(struct character *)malloc((128)*sizeof(struct character));
         for(int i = 32; i < 128; i++) {
             if(FT_Load_Char(face, i, FT_LOAD_RENDER)) {
                 fprintf(stderr, "Loading character %c failed!\n", i);
                 continue;
             }
-            w += g->bitmap.width;
+            w += g->advance.x>>6;
+
             h = g->bitmap.rows<h?h:g->bitmap.rows;
 
+            max_above = g->bitmap_top<h?h:g->bitmap_top;
+            max_below = -(g->bitmap_top-g->bitmap.rows)<h?h:-(g->bitmap_top-g->bitmap.rows);
+
         }
+        h = max_below + max_above;
 
         atlas_width = w;
         atlas_height=h;
@@ -158,8 +160,10 @@ int main()
         glGenTextures(1, &font_tex);
         glBindTexture(GL_TEXTURE_2D, font_tex);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
-
+        unsigned char *tmp_data = malloc(w*h);
+        memset(tmp_data,0,w*h);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, tmp_data);
+        free(tmp_data);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -167,28 +171,17 @@ int main()
 
         int x = 0;
 
-        int bottom;
         for(int i = 32; i < 128; i++) {
             struct character * ch = characters+i;
             if(FT_Load_Char(face, i, FT_LOAD_RENDER)){
                 fprintf(stderr,"failed:%c\n",i);
                 continue;
             }
+            glTexSubImage2D(GL_TEXTURE_2D, 0, x+g->bitmap_left,h-g->bitmap_top-max_below, g->bitmap.width, g->bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, g->bitmap.buffer);
 
-
-            glTexSubImage2D(GL_TEXTURE_2D, 0, x, 0, g->bitmap.width, g->bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, g->bitmap.buffer);
-
-            ch->ax = g->advance.x >> 6;
-            ch->ay = g->advance.y >> 6;
-
-            ch->bw = g->bitmap.width;
-            ch->bh = g->bitmap.rows;
-
-            ch->bl = g->bitmap_left;
-            ch->bt = g->bitmap_top;
 
             ch->tx = (float)x/atlas_width;
-            x += g->bitmap.width;
+            x += g->advance.x>>6;
             advance_x=g->advance.x>>6;
             //printf("width:%f,height:%f\n",characters[i].bw,characters[i].bh);
         }
@@ -306,13 +299,11 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
 
         //printf("x:%fy:%f\n",xpos,ypos);
 
-        float w = ch.bw;
-        float h = ch.bh;
         // update VBO for each character
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
-        insert_float_array(&my_float_array, ch.bl);
-        insert_float_array(&my_float_array,ch.bt);
+        insert_float_array(&my_float_array, 0);
+        insert_float_array(&my_float_array,atlas_height);
         insert_float_array(&my_float_array,color_r);
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
@@ -321,28 +312,28 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
 
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
-        insert_float_array(&my_float_array, ch.bl);
-        insert_float_array(&my_float_array,ch.bt-ch.bh);
+        insert_float_array(&my_float_array, 0);
+        insert_float_array(&my_float_array,0.0);
         insert_float_array(&my_float_array,color_r);
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
         insert_float_array(&my_float_array,ch.tx);
-        insert_float_array(&my_float_array,ch.bh / atlas_height);
+        insert_float_array(&my_float_array,1.0);
 
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
-        insert_float_array(&my_float_array, w+ch.bl);
-        insert_float_array(&my_float_array,ch.bt-ch.bh);
+        insert_float_array(&my_float_array, advance_x);
+        insert_float_array(&my_float_array,0);
         insert_float_array(&my_float_array,color_r);
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
-        insert_float_array(&my_float_array,ch.tx+ch.bw / atlas_width);
-        insert_float_array(&my_float_array,ch.bh / atlas_height);
+        insert_float_array(&my_float_array,ch.tx+1.0*advance_x / atlas_width);
+        insert_float_array(&my_float_array,1.0);
 
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
-        insert_float_array(&my_float_array, ch.bl);
-        insert_float_array(&my_float_array,ch.bt);
+        insert_float_array(&my_float_array, 0);
+        insert_float_array(&my_float_array,atlas_height);
         insert_float_array(&my_float_array,color_r);
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
@@ -351,22 +342,22 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
 
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
-        insert_float_array(&my_float_array, w+ch.bl);
-        insert_float_array(&my_float_array,ch.bt-ch.bh);
+        insert_float_array(&my_float_array, advance_x);
+        insert_float_array(&my_float_array,0);
         insert_float_array(&my_float_array,color_r);
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
-        insert_float_array(&my_float_array,ch.tx+ch.bw / atlas_width);
-        insert_float_array(&my_float_array,ch.bh / atlas_height);
+        insert_float_array(&my_float_array,ch.tx+1.0*advance_x / atlas_width);
+        insert_float_array(&my_float_array,1.0);
 
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
-        insert_float_array(&my_float_array, w+ch.bl);
-        insert_float_array(&my_float_array,ch.bt);
+        insert_float_array(&my_float_array, advance_x);
+        insert_float_array(&my_float_array,atlas_height);
         insert_float_array(&my_float_array,color_r);
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
-        insert_float_array(&my_float_array,ch.tx+ch.bw / atlas_width);
+        insert_float_array(&my_float_array,ch.tx+1.0*advance_x / atlas_width);
         insert_float_array(&my_float_array,0.0f);
 
 
