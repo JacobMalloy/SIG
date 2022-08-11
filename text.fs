@@ -6,12 +6,13 @@ in vec3 textColor;
 out vec4 color;
 
 uniform sampler2D text;
-//uniform vec3 textColor;
 
 void main()
 {
     //vec4 sampled = vec4(1.0, 1.0, 1.0, 1.0);
-    vec4 bg_color = vec4(0,1,1,1);
-    color = vec4(mix(bg_color.xyz,textColor.xyz,texture(text, TexCoords).r),1.0);
+    vec3 bg_color = vec3(0,0,0);
+    float alpha = texelFetch(text, ivec2(int(TexCoords.x),int(TexCoords.y)),0).r;
+//    float alpha = texture(text, TexCoords).r;
+    color = vec4(mix(bg_color,textColor,alpha),1.0);
 
 }

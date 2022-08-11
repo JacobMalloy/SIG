@@ -26,7 +26,7 @@ void RenderText(unsigned int shader, char * text, float x, float y, float color_
 void initialize_float_array(struct float_array *array);
 void insert_float_array(struct float_array *array,float f);
 void set_size(unsigned int width,unsigned int height, unsigned int shader);
-
+void insert_float_array_int(struct float_array *array,int f);
 int SCR_WIDTH = 800;
 int SCR_HEIGHT = 600;
 
@@ -87,6 +87,7 @@ int main()
 
     // OpenGL state
     // ------------
+/*     glDisable(GL_DEPTH_TEST); */
     glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -180,7 +181,7 @@ int main()
             glTexSubImage2D(GL_TEXTURE_2D, 0, x+g->bitmap_left,h-g->bitmap_top-max_below, g->bitmap.width, g->bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, g->bitmap.buffer);
 
 
-            ch->tx = (float)x/atlas_width;
+            ch->tx = x;
             x += g->advance.x>>6;
             advance_x=g->advance.x>>6;
             //printf("width:%f,height:%f\n",characters[i].bw,characters[i].bh);
@@ -293,11 +294,10 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
     for (c = text; *c != '\0'; c++)
     {
         struct character ch = characters[*c];
-
         float xpos = x;
         float ypos = y;
-
         //printf("x:%fy:%f\n",xpos,ypos);
+
 
         // update VBO for each character
         insert_float_array(&my_float_array,xpos);
@@ -308,7 +308,7 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
         insert_float_array(&my_float_array, ch.tx);
-        insert_float_array(&my_float_array,0.0f);
+        insert_float_array(&my_float_array,0);
 
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
@@ -318,7 +318,7 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
         insert_float_array(&my_float_array,ch.tx);
-        insert_float_array(&my_float_array,1.0);
+        insert_float_array(&my_float_array,atlas_height);
 
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
@@ -327,8 +327,8 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
         insert_float_array(&my_float_array,color_r);
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
-        insert_float_array(&my_float_array,ch.tx+1.0*advance_x / atlas_width);
-        insert_float_array(&my_float_array,1.0);
+        insert_float_array(&my_float_array,ch.tx+advance_x);
+        insert_float_array(&my_float_array,atlas_height);
 
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
@@ -338,7 +338,7 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
         insert_float_array(&my_float_array, ch.tx);
-        insert_float_array(&my_float_array,0.0f);
+        insert_float_array(&my_float_array,0.0);
 
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
@@ -347,8 +347,8 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
         insert_float_array(&my_float_array,color_r);
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
-        insert_float_array(&my_float_array,ch.tx+1.0*advance_x / atlas_width);
-        insert_float_array(&my_float_array,1.0);
+        insert_float_array(&my_float_array,ch.tx+advance_x);
+        insert_float_array(&my_float_array,atlas_height);
 
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
@@ -357,8 +357,8 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
         insert_float_array(&my_float_array,color_r);
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
-        insert_float_array(&my_float_array,ch.tx+1.0*advance_x / atlas_width);
-        insert_float_array(&my_float_array,0.0f);
+        insert_float_array(&my_float_array,ch.tx+advance_x);
+        insert_float_array(&my_float_array,0.0);
 
 
         // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
@@ -393,6 +393,14 @@ void insert_float_array(struct float_array *array,float f){
         array->size=array->size*2;
     }
     array->data[array->length]=f;
+    array->length++;
+}
+void insert_float_array_int(struct float_array *array,int f){
+    if(array->size<=array->length){
+        array->data=realloc(array->data,sizeof(float)*array->size*2);
+        array->size=array->size*2;
+    }
+    *(int *)&array->data[array->length]=f;
     array->length++;
 }
 
