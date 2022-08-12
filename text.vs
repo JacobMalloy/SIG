@@ -11,9 +11,14 @@ uniform mat4 projection;
 uniform mat4 scale_matrix;
 uniform mat4 char_screen;
 
+out VS_OUT {
+    vec2 TexCoords;
+    vec3 textColor;
+} vs_out;
+
 void main()
 {
-    textColor=textColor_in;
-    TexCoords=TexCoords_in;
+    vs_out.textColor=textColor_in;
+    vs_out.TexCoords=TexCoords_in;
     gl_Position = projection * (vec4((char_screen * vec4(vertex, 0.0, 1.0)).xy,0.0,0.0) + (scale_matrix * vec4(size,0.0,1.0)));
 }

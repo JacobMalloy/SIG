@@ -7,9 +7,10 @@
 #include <stdlib.h>
 int opengl_compile_shaders();
 
-int opengl_compile_shaders(char * vertex, char *frag){
+int opengl_compile_shaders(char * vertex, char *frag,char *geo){
     unsigned int fragmentShader;
     unsigned int vertexShader;
+    unsigned int geoShader;
     unsigned int shaderProgram;
 
     int  success;
@@ -49,6 +50,22 @@ int opengl_compile_shaders(char * vertex, char *frag){
     shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
+    if(geo!=NULL){
+        fd = fopen(geo,"r");
+        tmp_int =fread(file_buffer,1,4096,fd);
+        file_buffer[tmp_int]=0;
+        fclose(fd);
+        geoShader = glCreateShader(GL_GEOMETRY_SHADER);
+        glShaderSource(geoShader, 1, (const char**)&tmp, NULL);
+        glCompileShader(geoShader);
+        glGetShaderiv(geoShader, GL_COMPILE_STATUS, &success);
+        if(!success){
+            glGetShaderInfoLog(geoShader, 512, NULL, infoLog);
+            fprintf(stderr,"Failed to compile fragment shader\n%s\n",infoLog);
+            goto fail_post_geo;
+        }
+        glAttachShader(shaderProgram, geoShader);
+    }
     glLinkProgram(shaderProgram);
     glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
     if(!success) {
@@ -59,7 +76,10 @@ int opengl_compile_shaders(char * vertex, char *frag){
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
     return shaderProgram;
-
+    fail_post_geo:;
+    if(geo!=NULL){
+        glDeleteShader(geoShader);
+    }
     fail_post_fragment:;
     glDeleteShader(fragmentShader);
     fail_post_vertex:;
