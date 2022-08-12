@@ -21,12 +21,12 @@ void main() {
 
     char_loc= vec4(0,0,0,1);
     gl_Position = projection*(gl_in[0].gl_Position + scale_matrix * char_loc);
-    TexCoords = vec2(gs_in[0].TexCoords,104);
+    TexCoords = vec2(gs_in[0].TexCoords,atlas_height);
     textColor = gs_in[0].textColor;
     EmitVertex();
     char_loc= vec4(advance_x,0,0,1);
     gl_Position = projection*(gl_in[0].gl_Position + scale_matrix * char_loc);
-    TexCoords = vec2(gs_in[0].TexCoords + 27,atlas_height);
+    TexCoords = vec2(gs_in[0].TexCoords + advance_x,atlas_height);
     textColor = gs_in[0].textColor;
     EmitVertex();
     char_loc= vec4(0,atlas_height,0,1);
@@ -37,7 +37,7 @@ void main() {
 
     char_loc= vec4(advance_x,atlas_height,0,1);
     gl_Position = projection*(gl_in[0].gl_Position + scale_matrix * char_loc);
-    TexCoords = ivec2(gs_in[0].TexCoords + 27,0);
+    TexCoords = ivec2(gs_in[0].TexCoords + advance_x,0);
     textColor = gs_in[0].textColor;
 
     //textColor=vec3(0,0,1);

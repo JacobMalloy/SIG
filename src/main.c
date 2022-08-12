@@ -35,8 +35,8 @@ unsigned int atlas_height;
 unsigned int advance_x;
 GLuint font_tex;
 
-unsigned int font_size=45;
-unsigned int orig_font_size=50;
+unsigned int font_size=100;
+unsigned int orig_font_size=300;
 float font_scale;
 unsigned int shader;
 
@@ -59,6 +59,8 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER,1);
+    glfwWindowHint(GLFW_SAMPLES, 4);
+
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -91,6 +93,8 @@ int main()
     glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_MULTISAMPLE);
+
 
     // compile and setup the shader
     // ----------------------------
