@@ -208,7 +208,7 @@ int main()
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), 0);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *)(2*sizeof(float)));
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *)(4*sizeof(float)));
-    glVertexAttribPointer(3, 2, GL_INT, GL_FALSE, 9 * sizeof(float), (void *)(7*sizeof(float)));
+    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *)(7*sizeof(float)));
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
@@ -287,6 +287,8 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
     value[14]=0.0;
     value[15]=1.0;
     glUniformMatrix4fv(glGetUniformLocation(shader, "scale_matrix"), 1, GL_FALSE, value);
+    glUniform1f(glGetUniformLocation(shader, "advance_x"), (float)advance_x);
+    glUniform1f(glGetUniformLocation(shader, "atlas_height"), (float)atlas_height);
     // iterate through all characters
     float value2[16]={advance_x*font_scale,0,0,0,0,-1.0*atlas_height*font_scale,0,0,0,0,1.0,0,0,1.0*SCR_HEIGHT-(1.0*atlas_height*font_scale),0,1};
     glUniformMatrix4fv(glGetUniformLocation(shader, "char_screen"), 1, GL_FALSE, value2);
@@ -297,7 +299,8 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
         float xpos = x;
         float ypos = y;
         //printf("x:%fy:%f\n",xpos,ypos);
-
+        ch = characters[101];
+        printf("%d - %d - %d\n",advance_x,ch.tx,atlas_height);
 
         // update VBO for each character
         insert_float_array(&my_float_array,xpos);
@@ -307,9 +310,9 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
         insert_float_array(&my_float_array,color_r);
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
-        insert_float_array_int(&my_float_array, ch.tx);
+        insert_float_array(&my_float_array, ch.tx);
         insert_float_array_int(&my_float_array,0);
-
+/*
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
         insert_float_array(&my_float_array, 0);
@@ -359,7 +362,7 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
         insert_float_array(&my_float_array,color_b);
         insert_float_array_int(&my_float_array,ch.tx+advance_x);
         insert_float_array_int(&my_float_array,0);
-
+*/
 
         // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
         x ++; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
@@ -373,7 +376,7 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     // render quad
-    glDrawArrays(GL_TRIANGLES, 0, my_float_array.length/9);
+    glDrawArrays(GL_POINTS, 0, my_float_array.length/9);
     glBindVertexArray(0);
     //glBindTexture(GL_TEXTURE_2D, 0);
 }
