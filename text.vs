@@ -1,8 +1,7 @@
 #version 330 core
 layout (location = 0) in vec2 vertex; // <vec2 pos, vec2 tex>
-layout (location = 1) in vec2 size; // <vec2 pos, vec2 tex>
-layout (location = 2) in vec3 textColor_in;
-layout (location = 3) in vec2 TexCoords_in; // <vec2 pos, vec2 tex>
+layout (location = 1) in vec3 textColor_in;
+layout (location = 2) in float TexCoords_in; // <vec2 pos, vec2 tex>
 out vec2 TexCoords;
 out vec3 textColor;
 
@@ -10,7 +9,7 @@ out vec3 textColor;
 uniform mat4 char_screen;
 
 out VS_OUT {
-    vec2 TexCoords;
+    float TexCoords;
     vec3 textColor;
 } vs_out;
 

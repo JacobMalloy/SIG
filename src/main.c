@@ -35,7 +35,7 @@ unsigned int atlas_height;
 unsigned int advance_x;
 GLuint font_tex;
 
-unsigned int font_size=30;
+unsigned int font_size=45;
 unsigned int orig_font_size=50;
 float font_scale;
 unsigned int shader;
@@ -202,13 +202,11 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(3);
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), 0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *)(2*sizeof(float)));
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *)(4*sizeof(float)));
-    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *)(7*sizeof(float)));
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(2*sizeof(float)));
+    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(5*sizeof(float)));
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
@@ -222,7 +220,7 @@ int main()
 
         // render
         // ------
-        glClearColor(0.2f, 0.3f, 0.3f, 0.7f);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -289,6 +287,7 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
     glUniformMatrix4fv(glGetUniformLocation(shader, "scale_matrix"), 1, GL_FALSE, value);
     glUniform1f(glGetUniformLocation(shader, "advance_x"), (float)advance_x);
     glUniform1f(glGetUniformLocation(shader, "atlas_height"), (float)atlas_height);
+    glUniform1f(glGetUniformLocation(shader, "bg_alpha"), 0.6);
     // iterate through all characters
     float value2[16]={advance_x*font_scale,0,0,0,0,-1.0*atlas_height*font_scale,0,0,0,0,1.0,0,0,1.0*SCR_HEIGHT-(1.0*atlas_height*font_scale),0,1};
     glUniformMatrix4fv(glGetUniformLocation(shader, "char_screen"), 1, GL_FALSE, value2);
@@ -299,19 +298,14 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
         float xpos = x;
         float ypos = y;
         //printf("x:%fy:%f\n",xpos,ypos);
-        ch = characters[101];
-        printf("%d - %d - %d\n",advance_x,ch.tx,atlas_height);
 
         // update VBO for each character
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
-        insert_float_array(&my_float_array, 0);
-        insert_float_array(&my_float_array,atlas_height);
         insert_float_array(&my_float_array,color_r);
         insert_float_array(&my_float_array, color_g);
         insert_float_array(&my_float_array,color_b);
         insert_float_array(&my_float_array, ch.tx);
-        insert_float_array_int(&my_float_array,0);
 /*
         insert_float_array(&my_float_array,xpos);
         insert_float_array(&my_float_array,ypos);
@@ -376,7 +370,7 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     // render quad
-    glDrawArrays(GL_POINTS, 0, my_float_array.length/9);
+    glDrawArrays(GL_POINTS, 0, my_float_array.length/6);
     glBindVertexArray(0);
     //glBindTexture(GL_TEXTURE_2D, 0);
 }
