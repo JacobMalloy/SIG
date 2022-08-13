@@ -48,8 +48,8 @@ unsigned int atlas_height;
 unsigned int advance_x;
 GLuint font_tex;
 
-unsigned int font_size=50;
-unsigned int orig_font_size=50;
+unsigned int font_size=25;
+unsigned int orig_font_size=25;
 float font_scale;
 unsigned int shader;
 
@@ -164,10 +164,10 @@ int main()
             }
             w += g->advance.x>>6;
 
-            h = g->bitmap.rows<h?h:g->bitmap.rows;
 
-            max_above = g->bitmap_top<h?h:g->bitmap_top;
-            max_below = -(g->bitmap_top-g->bitmap.rows)<h?h:-(g->bitmap_top-g->bitmap.rows);
+
+            max_above = g->bitmap_top<max_above?max_above:g->bitmap_top;
+            max_below = -((int)g->bitmap_top-(int)g->bitmap.rows)<max_below?max_below:-((int)g->bitmap_top-(int)g->bitmap.rows);
 
         }
         h = max_below + max_above;
@@ -211,6 +211,28 @@ int main()
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
 
+    float value[16]={advance_x*font_scale,0,0,0,0,-1.0*atlas_height*font_scale,0,0,0,0,1.0,0,0,1.0*SCR_HEIGHT-(1.0*atlas_height*font_scale),0,1};
+    glUniformMatrix4fv(glGetUniformLocation(shader, "char_screen"), 1, GL_FALSE, value);
+    value[0]=font_scale;
+    value[1]=0.0;
+    value[2]=0.0;
+    value[3]=0.0;
+    value[4]=0.0;
+    value[5]=font_scale;
+    value[6]=0.0;
+    value[7]=0.0;
+    value[8]=0.0;
+    value[9]=0.0;
+    value[10]=1.0;
+    value[11]=0.0;
+    value[12]=0.0;
+    value[13]=0.0f;
+    value[14]=0.0;
+    value[15]=1.0;
+    glUniformMatrix4fv(glGetUniformLocation(shader, "scale_matrix"), 1, GL_FALSE, value);
+    glUniform1f(glGetUniformLocation(shader, "advance_x"), (float)advance_x);
+    glUniform1f(glGetUniformLocation(shader, "atlas_height"), (float)atlas_height);
+    glUniform1f(glGetUniformLocation(shader, "bg_alpha"), 0.6);
 
     // configure VAO/VBO for texture quads
     // -----------------------------------
@@ -287,30 +309,8 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(VAO);
 
-    GLfloat value[16];
-    value[0]=font_scale;
-    value[1]=0.0;
-    value[2]=0.0;
-    value[3]=0.0;
-    value[4]=0.0;
-    value[5]=font_scale;
-    value[6]=0.0;
-    value[7]=0.0;
-    value[8]=0.0;
-    value[9]=0.0;
-    value[10]=1.0;
-    value[11]=0.0;
-    value[12]=0.0;
-    value[13]=0.0f;
-    value[14]=0.0;
-    value[15]=1.0;
-    glUniformMatrix4fv(glGetUniformLocation(shader, "scale_matrix"), 1, GL_FALSE, value);
-    glUniform1f(glGetUniformLocation(shader, "advance_x"), (float)advance_x);
-    glUniform1f(glGetUniformLocation(shader, "atlas_height"), (float)atlas_height);
-    glUniform1f(glGetUniformLocation(shader, "bg_alpha"), 0.6);
+
     // iterate through all characters
-    float value2[16]={advance_x*font_scale,0,0,0,0,-1.0*atlas_height*font_scale,0,0,0,0,1.0,0,0,1.0*SCR_HEIGHT-(1.0*atlas_height*font_scale),0,1};
-    glUniformMatrix4fv(glGetUniformLocation(shader, "char_screen"), 1, GL_FALSE, value2);
     char * c;
     for (c = text; *c != '\0'; c++)
     {
@@ -344,6 +344,8 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
     glDrawArrays(GL_POINTS, 0, my_text_vertex_array.length);
     glBindVertexArray(0);
     //glBindTexture(GL_TEXTURE_2D, 0);
+
+    long long time;
 }
 
 
