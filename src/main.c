@@ -6,8 +6,22 @@
 
 #include "shader.h"
 
-struct float_array{
-    float *data;
+#include <time.h>
+
+struct text_vertex{
+    float x;
+    float y;
+    float r;
+    float g;
+    float b;
+    float bg_r;
+    float bg_g;
+    float bg_b;
+    float tx_offset;
+};
+
+struct text_vertex_array{
+    struct text_vertex *data;
     int length;
     int size;
 };
@@ -23,10 +37,9 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void character_callback(GLFWwindow* window, unsigned int codepoint);
 void processInput(GLFWwindow *window);
 void RenderText(unsigned int shader, char * text, float x, float y, float color_r,float color_g,float color_b);
-void initialize_float_array(struct float_array *array);
-void insert_float_array(struct float_array *array,float f);
+void initialize_text_vertex_array(struct text_vertex_array *array);
+void insert_text_vertex_array(struct text_vertex_array *array,struct text_vertex * f);
 void set_size(unsigned int width,unsigned int height, unsigned int shader);
-void insert_float_array_int(struct float_array *array,int f);
 int SCR_WIDTH = 800;
 int SCR_HEIGHT = 600;
 
@@ -35,8 +48,8 @@ unsigned int atlas_height;
 unsigned int advance_x;
 GLuint font_tex;
 
-unsigned int font_size=100;
-unsigned int orig_font_size=300;
+unsigned int font_size=50;
+unsigned int orig_font_size=50;
 float font_scale;
 unsigned int shader;
 
@@ -45,13 +58,13 @@ char *current_location;
 
 struct character* characters;
 unsigned int VAO, VBO;
-static struct float_array my_float_array;
+static struct text_vertex_array my_text_vertex_array;
 
 int main()
 {
     current_location=output;
     font_scale = 1.0*font_size/orig_font_size;
-    initialize_float_array(&my_float_array);
+    initialize_text_vertex_array(&my_text_vertex_array);
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
@@ -60,6 +73,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER,1);
     glfwWindowHint(GLFW_SAMPLES, 4);
+    glfwSwapInterval(1);
 
 
 #ifdef __APPLE__
@@ -94,7 +108,7 @@ int main()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_MULTISAMPLE);
-
+    glEnable(GL_FRAMEBUFFER_SRGB);
 
     // compile and setup the shader
     // ----------------------------
@@ -171,8 +185,8 @@ int main()
         free(tmp_data);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
         int x = 0;
 
@@ -208,9 +222,11 @@ int main()
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(2*sizeof(float)));
-    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(5*sizeof(float)));
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(struct text_vertex), 0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(struct text_vertex), (void *)(2*sizeof(float)));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(struct text_vertex), (void *)(5*sizeof(float)));
+    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(struct text_vertex), (void *)(8*sizeof(float)));
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
@@ -224,7 +240,7 @@ int main()
 
         // render
         // ------
-        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClearColor(0.0f, 0.9f, 0.9f, 1.0f);
 
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -265,7 +281,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 // -------------------
 void RenderText(unsigned int shader, char* text, float x, float y, float color_r,float color_g,float color_b)
 {
-    my_float_array.length=0;
+    my_text_vertex_array.length=0;
     // activate corresponding render state
     glUseProgram(shader);
     glActiveTexture(GL_TEXTURE0);
@@ -299,68 +315,19 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
     for (c = text; *c != '\0'; c++)
     {
         struct character ch = characters[*c];
-        float xpos = x;
-        float ypos = y;
-        //printf("x:%fy:%f\n",xpos,ypos);
+        struct text_vertex vert;
 
-        // update VBO for each character
-        insert_float_array(&my_float_array,xpos);
-        insert_float_array(&my_float_array,ypos);
-        insert_float_array(&my_float_array,color_r);
-        insert_float_array(&my_float_array, color_g);
-        insert_float_array(&my_float_array,color_b);
-        insert_float_array(&my_float_array, ch.tx);
-/*
-        insert_float_array(&my_float_array,xpos);
-        insert_float_array(&my_float_array,ypos);
-        insert_float_array(&my_float_array, 0);
-        insert_float_array(&my_float_array,0.0);
-        insert_float_array(&my_float_array,color_r);
-        insert_float_array(&my_float_array, color_g);
-        insert_float_array(&my_float_array,color_b);
-        insert_float_array_int(&my_float_array,ch.tx);
-        insert_float_array_int(&my_float_array,atlas_height);
+        vert.x=x;
+        vert.y=y;
+        vert.r=color_r;
+        vert.g=color_g;
+        vert.b=color_b;
+        vert.bg_r=0;
+        vert.bg_g=0;
+        vert.bg_b=0;
+        vert.tx_offset=ch.tx;
 
-        insert_float_array(&my_float_array,xpos);
-        insert_float_array(&my_float_array,ypos);
-        insert_float_array(&my_float_array, advance_x);
-        insert_float_array(&my_float_array,0);
-        insert_float_array(&my_float_array,color_r);
-        insert_float_array(&my_float_array, color_g);
-        insert_float_array(&my_float_array,color_b);
-        insert_float_array_int(&my_float_array,ch.tx+advance_x);
-        insert_float_array_int(&my_float_array,atlas_height);
-
-        insert_float_array(&my_float_array,xpos);
-        insert_float_array(&my_float_array,ypos);
-        insert_float_array(&my_float_array, 0);
-        insert_float_array(&my_float_array,atlas_height);
-        insert_float_array(&my_float_array,color_r);
-        insert_float_array(&my_float_array, color_g);
-        insert_float_array(&my_float_array,color_b);
-        insert_float_array_int(&my_float_array, ch.tx);
-        insert_float_array_int(&my_float_array,0);
-
-        insert_float_array(&my_float_array,xpos);
-        insert_float_array(&my_float_array,ypos);
-        insert_float_array(&my_float_array, advance_x);
-        insert_float_array(&my_float_array,0);
-        insert_float_array(&my_float_array,color_r);
-        insert_float_array(&my_float_array, color_g);
-        insert_float_array(&my_float_array,color_b);
-        insert_float_array_int(&my_float_array,ch.tx+advance_x);
-        insert_float_array_int(&my_float_array,atlas_height);
-
-        insert_float_array(&my_float_array,xpos);
-        insert_float_array(&my_float_array,ypos);
-        insert_float_array(&my_float_array, advance_x);
-        insert_float_array(&my_float_array,atlas_height);
-        insert_float_array(&my_float_array,color_r);
-        insert_float_array(&my_float_array, color_g);
-        insert_float_array(&my_float_array,color_b);
-        insert_float_array_int(&my_float_array,ch.tx+advance_x);
-        insert_float_array_int(&my_float_array,0);
-*/
+        insert_text_vertex_array(&my_text_vertex_array,&vert);
 
         // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
         x ++; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
@@ -369,12 +336,12 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
     glBindTexture(GL_TEXTURE_2D, font_tex);
     // update content of VBO memory
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * my_float_array.length, my_float_array.data, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(struct text_vertex) * my_text_vertex_array.length, my_text_vertex_array.data, GL_DYNAMIC_DRAW);
     //glBufferSubData(GL_ARRAY_BUFFER, 0, my_float_array.length*sizeof(float), my_float_array.data); // be sure to use glBufferSubData and not glBufferData
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     // render quad
-    glDrawArrays(GL_POINTS, 0, my_float_array.length/6);
+    glDrawArrays(GL_POINTS, 0, my_text_vertex_array.length);
     glBindVertexArray(0);
     //glBindTexture(GL_TEXTURE_2D, 0);
 }
@@ -382,27 +349,18 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
 
 
 
-void initialize_float_array(struct float_array *array){
-    array->data=malloc(sizeof(float)*400);
+void initialize_text_vertex_array(struct text_vertex_array *array){
+    array->data=malloc(sizeof(struct text_vertex)*400);
     array->length=0;
     array->size=400;
 }
 
-void insert_float_array(struct float_array *array,float f){
+void insert_text_vertex_array(struct text_vertex_array *array,struct text_vertex *in_data){
     if(array->size<=array->length){
-        array->data=realloc(array->data,sizeof(float)*array->size*2);
-        array->size=array->size*2;
+        array->size*=2;
+        array->data=realloc(array->data,sizeof(struct text_vertex)*array->size);
     }
-    array->data[array->length]=f;
-    array->length++;
-}
-void insert_float_array_int(struct float_array *array,int f){
-    if(array->size<=array->length){
-        array->data=realloc(array->data,sizeof(float)*array->size*2);
-        array->size=array->size*2;
-    }
-    *(int *)&array->data[array->length]=f;
-    array->length++;
+    memcpy(&array->data[array->length++],in_data,sizeof(struct text_vertex));
 }
 
 

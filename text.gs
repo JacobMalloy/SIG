@@ -10,6 +10,7 @@ uniform mat4 scale_matrix;
 
 in VS_OUT {
     float TexCoords;
+    vec3 bg_textColor;
     vec3 textColor;
 } gs_in[];
 
