@@ -8,6 +8,12 @@
 
 #include <time.h>
 
+#define MAX(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
+
+
 struct text_vertex{
     float x;
     float y;
@@ -166,8 +172,8 @@ int main()
 
 
 
-            max_above = g->bitmap_top<max_above?max_above:g->bitmap_top;
-            max_below = -((int)g->bitmap_top-(int)g->bitmap.rows)<max_below?max_below:-((int)g->bitmap_top-(int)g->bitmap.rows);
+            max_above = MAX(g->bitmap_top,max_above);
+            max_below = MAX(-((int)g->bitmap_top-(int)g->bitmap.rows),max_below);
 
         }
         h = max_below + max_above;
