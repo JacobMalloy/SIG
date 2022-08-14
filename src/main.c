@@ -96,6 +96,17 @@ int main()
         return -1;
     }
     glfwMakeContextCurrent(window);
+
+/*     printf("OpenGL info:\n" */
+/*     "\tVendor   = \"%s\"\n" */
+/*     "\tRenderer = \"%s\"\n" */
+/*     "\tVersion  = \"%s\"\n" */
+/*     "\tGLSL     = \"%s\"\n", */
+/*     glGetString(GL_VENDOR), */
+/*     glGetString(GL_RENDERER), */
+/*     glGetString(GL_VERSION), */
+/*     glGetString(GL_SHADING_LANGUAGE_VERSION) */
+/* ); */
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCharCallback(window, character_callback);
 
@@ -246,7 +257,7 @@ int main()
     glGenBuffers(1, &VBO);
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(struct text_vertex)*2500, NULL, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
@@ -272,11 +283,28 @@ int main()
 
         glClear(GL_COLOR_BUFFER_BIT);
 
+
+        my_text_vertex_array.length=0;
+        // activate corresponding render state
+        glUseProgram(shader);
+        glActiveTexture(GL_TEXTURE0);
+        glBindVertexArray(VAO);
+
         RenderText(shader, "Testing green", 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
         RenderText(shader, "testing red", 0.0f, 1.0f, 1.0f, 0.0f, 0.0f);
         RenderText(shader, "Hello world", 4.0f, 5.0f, 0.0f, 0.0f, 0.8f);
         RenderText(shader, output, 0.0f, 6.0f, 247.0/255.0, 127.0/255.0, 0.0f);
+        glBindTexture(GL_TEXTURE_2D, font_tex);
+        // update content of VBO memory
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferSubData(GL_ARRAY_BUFFER,0, sizeof(struct text_vertex) * my_text_vertex_array.length, my_text_vertex_array.data);
+        //glBufferSubData(GL_ARRAY_BUFFER, 0, my_float_array.length*sizeof(float), my_float_array.data); // be sure to use glBufferSubData and not glBufferData
 
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        // render quad
+        glDrawArrays(GL_POINTS, 0, my_text_vertex_array.length);
+        glBindVertexArray(0);
+        //glBindTexture(GL_TEXTURE_2D, 0);
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
@@ -309,11 +337,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 // -------------------
 void RenderText(unsigned int shader, char* text, float x, float y, float color_r,float color_g,float color_b)
 {
-    my_text_vertex_array.length=0;
-    // activate corresponding render state
-    glUseProgram(shader);
-    glActiveTexture(GL_TEXTURE0);
-    glBindVertexArray(VAO);
 
 
     // iterate through all characters
@@ -339,17 +362,7 @@ void RenderText(unsigned int shader, char* text, float x, float y, float color_r
         x ++; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
     }
     // render glyph texture over quad
-    glBindTexture(GL_TEXTURE_2D, font_tex);
-    // update content of VBO memory
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(struct text_vertex) * my_text_vertex_array.length, my_text_vertex_array.data, GL_DYNAMIC_DRAW);
-    //glBufferSubData(GL_ARRAY_BUFFER, 0, my_float_array.length*sizeof(float), my_float_array.data); // be sure to use glBufferSubData and not glBufferData
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    // render quad
-    glDrawArrays(GL_POINTS, 0, my_text_vertex_array.length);
-    glBindVertexArray(0);
-    //glBindTexture(GL_TEXTURE_2D, 0);
 
     long long time;
 }
