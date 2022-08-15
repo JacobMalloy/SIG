@@ -54,8 +54,8 @@ unsigned int atlas_height;
 unsigned int advance_x;
 GLuint font_tex;
 
-unsigned int font_size=25;
-unsigned int orig_font_size=25;
+unsigned int font_size=50;
+unsigned int orig_font_size=50;
 float font_scale;
 unsigned int shader;
 
@@ -228,7 +228,7 @@ int main()
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
 
-    float value[16]={advance_x*font_scale,0,0,0,0,-1.0*atlas_height*font_scale,0,0,0,0,1.0,0,0,1.0*SCR_HEIGHT-(1.0*atlas_height*font_scale),0,1};
+    float value[16]={advance_x*font_scale,0,0,0,0,-1.0*atlas_height*font_scale,0,0,0,0,1.0,0,-1.0*advance_x*font_scale,1.0*SCR_HEIGHT,0,1};
     glUniformMatrix4fv(glGetUniformLocation(shader, "char_screen"), 1, GL_FALSE, value);
     value[0]=font_scale;
     value[1]=0.0;
@@ -290,10 +290,10 @@ int main()
         glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(VAO);
 
-        RenderText(shader, "Testing green", 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
-        RenderText(shader, "testing red", 0.0f, 1.0f, 1.0f, 0.0f, 0.0f);
+        RenderText(shader, "Testing green", 1.0f, 1.0f, 0.0f, 1.0f, 0.0f);
+        RenderText(shader, "testing red", 1.0f, 2.0f, 1.0f, 0.0f, 0.0f);
         RenderText(shader, "Hello world", 4.0f, 5.0f, 0.0f, 0.0f, 0.8f);
-        RenderText(shader, output, 0.0f, 6.0f, 247.0/255.0, 127.0/255.0, 0.0f);
+        RenderText(shader, output, 1.0f, 6.0f, 247.0/255.0, 127.0/255.0, 0.0f);
         glBindTexture(GL_TEXTURE_2D, font_tex);
         // update content of VBO memory
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
