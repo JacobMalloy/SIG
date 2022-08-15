@@ -2,7 +2,7 @@
 //layout (location = 1) in vec3 textColor; // <vec2 pos, vec2 tex>
 in vec2 TexCoords;
 in vec3 textColor;
-
+in vec3 bg_textColor;
 out vec4 color;
 
 uniform sampler2D text;
@@ -30,11 +30,10 @@ vec4 toLinear(vec4 sRGB)
 void main()
 {
     //vec4 sampled = vec4(1.0, 1.0, 1.0, 1.0);
-    vec4 bg_color = vec4(0,0,0,bg_alpha);
     float alpha = texelFetch(text, ivec2(int(TexCoords.x),int(TexCoords.y)),0).r;
 //    float alpha = texture(text, TexCoords).r;
     // color = vec4(mix(bg_color.rgb,textColor,alpha), 1.0);
-    color = fromLinear(alpha*vec4(textColor,1) + (1-alpha) * bg_color);
+    color = fromLinear(alpha*vec4(textColor,1) + (1-alpha) * vec4(bg_textColor,bg_alpha));
     //color = vec4(textColor,1)*vec4(1,1,1,alpha);
 /*    if (alpha == 0.0) {
         color = bg_color;
