@@ -4,9 +4,13 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#include <stdint.h>
+
+
 #include "shader.h"
 
-#include <time.h>
+#include "bucket_array.h"
+
 
 #define MAX(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -24,16 +28,44 @@ struct text_vertex{
     float tx_offset;
 };
 
+struct text_data{
+    uint32_t character;
+    struct{
+            struct{
+                uint32_t fg_red:8;
+                uint32_t fg_green:8;
+                uint32_t fg_blue:8;
+                uint32_t fg_flags:8;
+            };
+            struct{
+                uint32_t bg_red:8;
+                uint32_t bg_green:8;
+                uint32_t bg_blue:8;
+                uint32_t bg_flags:8;
+            };
+    };
+};
+
 struct text_vertex_array{
     struct text_vertex *data;
     int length;
     int size;
 };
 
+struct line_struct{
+    struct text_vertex *vertex_array;
+    struct text_data *data_array;
+    int length;
+    int size;
+    struct{
+        uint32_t dirty:1;
+    };
+};
+
 /// Holds all state information relevant to a character as loaded using FreeType
 struct character {
 
-  int tx; // x offset of glyph in texture coordinates
+    int tx; // x offset of glyph in texture coordinates
 };
 
 
@@ -70,6 +102,7 @@ static struct text_vertex_array my_text_vertex_array;
 
 int main()
 {
+    bucket_array_t virtual_screen = bucket_array_make( 64,struct line_struct );
     current_location=output;
     font_scale = 1.0*font_size/orig_font_size;
     initialize_text_vertex_array(&my_text_vertex_array);

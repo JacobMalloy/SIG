@@ -12,5 +12,4 @@ fi
 
 LIB_FLAGS="${LIB_FLAGS} ${GL_LIB}"
 
-
-gcc -g ${INCLUDE_FLAGS} -o SIG src/main.c src/glad.c ${LIB_FLAGS}
+gcc -g ${INCLUDE_FLAGS} -o SIG src/*.c ${LIB_FLAGS}
