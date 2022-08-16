@@ -20,5 +20,5 @@ void main()
     vs_out.textColor=textColor_in;
     vs_out.TexCoords=TexCoords_in;
     vs_out.bg_textColor=bg_textColor_in;
-    gl_Position = (vec4((char_screen * vec4(vertex, 0.0, 1.0)).xy,0.0,0.0) );
+    gl_Position = (vec4((char_screen * vec4(gl_VertexID%100,floor(gl_VertexID/100)+1, 0.0, 1.0)).xy,0.0,0.0) );
 }
