@@ -202,6 +202,8 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+    struct text_vertex *array;
+    array= malloc(sizeof(struct text_vertex)*300);
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -223,8 +225,6 @@ int main()
         glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(VAO);
 
-        struct text_vertex *array;
-        array= malloc(sizeof(struct text_vertex)*300);
         for(int i = 0 ; i<300;i++){
             array[i].r=1;
             array[i].g=1;
@@ -243,7 +243,6 @@ int main()
         // update content of VBO memory
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferSubData(GL_ARRAY_BUFFER,0, sizeof(struct text_vertex) * 300, array);
-        free(array);
         //glBufferSubData(GL_ARRAY_BUFFER, 0, my_float_array.length*sizeof(float), my_float_array.data); // be sure to use glBufferSubData and not glBufferData
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -256,7 +255,7 @@ int main()
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
+    free(array);
     glfwTerminate();
     return 0;
 }
