@@ -10,12 +10,8 @@
 #include "shader.h"
 
 #include "bucket_array.h"
+#include "font.h"
 
-
-#define MAX(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
 
 
 struct text_vertex{
@@ -62,12 +58,6 @@ struct line_struct{
     };
 };
 
-/// Holds all state information relevant to a character as loaded using FreeType
-struct character {
-
-    int tx; // x offset of glyph in texture coordinates
-};
-
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void character_callback(GLFWwindow* window, unsigned int codepoint);
@@ -76,6 +66,8 @@ void RenderText(unsigned int shader, char * text, float color_r,float color_g,fl
 void initialize_text_vertex_array(struct text_vertex_array *array);
 void insert_text_vertex_array(struct text_vertex_array *array,struct text_vertex * f);
 void set_size(unsigned int width,unsigned int height, unsigned int shader);
+int font_per_texture_callback(FT_GlyphSlot g,int x, int y);
+int font_setup_texture_callback(int w, int h);
 
 
 int SCR_WIDTH = 800;
@@ -83,9 +75,6 @@ int SCR_HEIGHT = 600;
 unsigned int width_chars;
 unsigned int height_chars;
 
-unsigned int atlas_width;
-unsigned int atlas_height;
-unsigned int advance_x;
 GLuint font_tex;
 
 unsigned int font_size=50;
@@ -96,13 +85,14 @@ unsigned int shader;
 char output[4096];
 char *current_location;
 
-struct character* characters;
+struct font_info my_font_info;
 unsigned int VAO, VBO;
 static struct text_vertex_array my_text_vertex_array;
 
 int main()
 {
-    bucket_array_t virtual_screen = bucket_array_make( 64,struct line_struct );
+    my_font_info.orig_font_size=orig_font_size;
+    //bucket_array_t virtual_screen = bucket_array_make( 64,struct line_struct );
     current_location=output;
     font_scale = 1.0*font_size/orig_font_size;
     initialize_text_vertex_array(&my_text_vertex_array);
@@ -132,16 +122,6 @@ int main()
     }
     glfwMakeContextCurrent(window);
 
-/*     printf("OpenGL info:\n" */
-/*     "\tVendor   = \"%s\"\n" */
-/*     "\tRenderer = \"%s\"\n" */
-/*     "\tVersion  = \"%s\"\n" */
-/*     "\tGLSL     = \"%s\"\n", */
-/*     glGetString(GL_VENDOR), */
-/*     glGetString(GL_RENDERER), */
-/*     glGetString(GL_VERSION), */
-/*     glGetString(GL_SHADING_LANGUAGE_VERSION) */
-/* ); */
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCharCallback(window, character_callback);
 
@@ -168,102 +148,20 @@ int main()
     glUseProgram(shader);
     glfwGetFramebufferSize(window, &SCR_WIDTH, &SCR_HEIGHT);
     set_size(SCR_WIDTH,SCR_HEIGHT,shader);
-    // FreeType
-    // --------
-    FT_Library ft;
+
+
+    my_font_info.characters = malloc(sizeof(struct character)*128);
     // All functions return a value different than 0 whenever an error occurred
-    if (FT_Init_FreeType(&ft))
-    {
-        fprintf(stderr,"ERROR::FREETYPE: Could not init FreeType Library\n");
+    if(freetype_init()){
+        return -1;
+    }
+    char * font_name = "victormono.ttf";
+    if (freetype_load_font(font_name,&my_font_info,&font_setup_texture_callback,&font_per_texture_callback)){
         return -1;
     }
 
-    // find path to font
-    char* font_name = "victormono.ttf";
-    if (font_name[0]=='0')
-    {
-        fprintf(stderr,"ERROR::FREETYPE: Failed to load font_name\n");
-        return -1;
-    }
 
-    // load font as face
-    FT_Face face;
-    if (FT_New_Face(ft, font_name, 0, &face)) {
-        fprintf(stderr,"ERROR::FREETYPE: Failed to load font\n");
-        return -1;
-    }
-    else {
-        // set size to load glyphs as
-        FT_Set_Pixel_Sizes(face, 0, orig_font_size);
-
-        // disable byte-alignment restriction
-        //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-        // load first 128 characters of ASCII set
-        FT_GlyphSlot g = face->glyph;
-        int w = 0;
-        int h = 0;
-
-        int max_above, max_below;
-
-        max_above=0;
-        max_below=0;
-        characters=(struct character *)malloc((128)*sizeof(struct character));
-        for(int i = 32; i < 128; i++) {
-            if(FT_Load_Char(face, i, FT_LOAD_RENDER)) {
-                fprintf(stderr, "Loading character %c failed!\n", i);
-                continue;
-            }
-            w += g->advance.x>>6;
-
-
-
-            max_above = MAX(g->bitmap_top,max_above);
-            max_below = MAX(-((int)g->bitmap_top-(int)g->bitmap.rows),max_below);
-
-        }
-        h = max_below + max_above;
-
-        atlas_width = w;
-        atlas_height=h;
-
-        glActiveTexture(GL_TEXTURE0);
-        glGenTextures(1, &font_tex);
-        glBindTexture(GL_TEXTURE_2D, font_tex);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        unsigned char *tmp_data = malloc(w*h);
-        memset(tmp_data,0,w*h);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, tmp_data);
-        free(tmp_data);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-        int x = 0;
-
-        for(int i = 32; i < 128; i++) {
-            struct character * ch = characters+i;
-            if(FT_Load_Char(face, i, FT_LOAD_RENDER)){
-                fprintf(stderr,"failed:%c\n",i);
-                continue;
-            }
-            glTexSubImage2D(GL_TEXTURE_2D, 0, x+g->bitmap_left,h-g->bitmap_top-max_below, g->bitmap.width, g->bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, g->bitmap.buffer);
-
-
-            ch->tx = x;
-            x += g->advance.x>>6;
-            advance_x=g->advance.x>>6;
-            //printf("width:%f,height:%f\n",characters[i].bw,characters[i].bh);
-        }
-
-        //glBindTexture(GL_TEXTURE_2D, 0);
-    }
-    // destroy FreeType once we're finished
-    FT_Done_Face(face);
-    FT_Done_FreeType(ft);
-
-    float value[16]={advance_x*font_scale,0,0,0,0,-1.0*atlas_height*font_scale,0,0,0,0,1.0,0,-1.0*advance_x*font_scale,1.0*SCR_HEIGHT,0,1};
+    float value[16]={my_font_info.advance_x*font_scale,0,0,0,0,-1.0*my_font_info.atlas_height*font_scale,0,0,0,0,1.0,0,-1.0*my_font_info.advance_x*font_scale,1.0*SCR_HEIGHT,0,1};
     glUniformMatrix4fv(glGetUniformLocation(shader, "char_screen"), 1, GL_FALSE, value);
     value[0]=font_scale;
     value[1]=0.0;
@@ -282,8 +180,8 @@ int main()
     value[14]=0.0;
     value[15]=1.0;
     glUniformMatrix4fv(glGetUniformLocation(shader, "scale_matrix"), 1, GL_FALSE, value);
-    glUniform1f(glGetUniformLocation(shader, "advance_x"), (float)advance_x);
-    glUniform1f(glGetUniformLocation(shader, "atlas_height"), (float)atlas_height);
+    glUniform1f(glGetUniformLocation(shader, "advance_x"), (float)my_font_info.advance_x);
+    glUniform1f(glGetUniformLocation(shader, "atlas_height"), (float)my_font_info.atlas_height);
     glUniform1f(glGetUniformLocation(shader, "bg_alpha"), 0.6);
 
     // configure VAO/VBO for texture quads
@@ -391,8 +289,8 @@ void RenderText(unsigned int shader, char* text, float color_r,float color_g,flo
     char * c;
     for (c = text; *c != '\0'; c++)
     {
-        struct character ch = characters[*c];
-        struct text_vertex vert;
+        struct character* ch = &my_font_info.characters[(int)*c];
+        //struct text_vertex vert;
 
         array[x].r=color_r;
         array[x].g=color_g;
@@ -400,8 +298,7 @@ void RenderText(unsigned int shader, char* text, float color_r,float color_g,flo
         array[x].bg_r=0;
         array[x].bg_g=0;
         array[x].bg_b=0;
-        array[x].tx_offset=ch.tx;
-
+        array[x].tx_offset=ch->tx;
         //insert_text_vertex_array(&my_text_vertex_array,&vert);
 
         // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
@@ -410,7 +307,6 @@ void RenderText(unsigned int shader, char* text, float color_r,float color_g,flo
     // render glyph texture over quad
 
 
-    long long time;
 }
 
 
@@ -467,4 +363,26 @@ void character_callback(GLFWwindow* window, unsigned int codepoint){
 
         break;
     }
+}
+
+
+int font_per_texture_callback(FT_GlyphSlot g,int x, int y){
+    glTexSubImage2D(GL_TEXTURE_2D, 0, x,y, g->bitmap.width, g->bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, g->bitmap.buffer);
+    return 0;
+}
+
+int font_setup_texture_callback(int w, int h){
+    glActiveTexture(GL_TEXTURE0);
+    glGenTextures(1, &font_tex);
+    glBindTexture(GL_TEXTURE_2D, font_tex);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    char * tmp = malloc(w*h);
+    memset(tmp,0,w*h);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE,tmp);
+    free(tmp);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    return 0;
 }
