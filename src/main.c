@@ -1,9 +1,8 @@
 #include <glad/glad.h>
-#include <GLFW/glfw3.h>
-
+#include "glfw.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
-
+#include "definitions.h"
 #include <stdint.h>
 
 
@@ -55,6 +54,7 @@ struct line_struct{
     int size;
     struct{
         uint32_t dirty:1;
+        uint32_t wrapped:1;
     };
 };
 
@@ -70,8 +70,7 @@ int font_per_texture_callback(FT_GlyphSlot g,int x, int y);
 int font_setup_texture_callback(int w, int h);
 
 
-int SCR_WIDTH = 800;
-int SCR_HEIGHT = 600;
+struct global_data data;
 unsigned int width_chars;
 unsigned int height_chars;
 
@@ -82,48 +81,28 @@ unsigned int orig_font_size=50;
 float font_scale;
 unsigned int shader;
 
-char output[4096];
-char *current_location;
 
 struct font_info my_font_info;
 unsigned int VAO, VBO;
 static struct text_vertex_array my_text_vertex_array;
+//extern GLFWwindow* window;
+
+
 
 int main()
 {
+    data.window_width=800;
+    data.window_height=600;
+
     my_font_info.orig_font_size=orig_font_size;
     //bucket_array_t virtual_screen = bucket_array_make( 64,struct line_struct );
-    current_location=output;
     font_scale = 1.0*font_size/orig_font_size;
     initialize_text_vertex_array(&my_text_vertex_array);
     // glfw: initialize and configure
     // ------------------------------
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER,1);
-    glfwWindowHint(GLFW_SAMPLES, 4);
-    glfwSwapInterval(1);
-
-
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-
-    // glfw window creation
-    // --------------------
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Term", NULL, NULL);
-    if (window == NULL)
-    {
-        fprintf(stderr,"Failed to create GLFW window\n");
-        glfwTerminate();
+    if(glfw_init(&data, &framebuffer_size_callback,&character_callback)){
         return -1;
     }
-    glfwMakeContextCurrent(window);
-
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetCharCallback(window, character_callback);
 
     // glad: load all OpenGL function pointers
     // ---------------------------------------
@@ -146,8 +125,8 @@ int main()
     // ----------------------------
     shader = opengl_compile_shaders("text.vs", "text.fs", "text.gs");
     glUseProgram(shader);
-    glfwGetFramebufferSize(window, &SCR_WIDTH, &SCR_HEIGHT);
-    set_size(SCR_WIDTH,SCR_HEIGHT,shader);
+    glfwGetFramebufferSize(window, &data.window_width, &data.window_height);
+    set_size(data.window_width,data.window_height,shader);
 
 
     my_font_info.characters = malloc(sizeof(struct character)*128);
@@ -161,7 +140,7 @@ int main()
     }
 
 
-    float value[16]={my_font_info.advance_x*font_scale,0,0,0,0,-1.0*my_font_info.atlas_height*font_scale,0,0,0,0,1.0,0,-1.0*my_font_info.advance_x*font_scale,1.0*SCR_HEIGHT,0,1};
+    float value[16]={my_font_info.advance_x*font_scale,0,0,0,0,-1.0*my_font_info.atlas_height*font_scale,0,0,0,0,1.0,0,-1.0*my_font_info.advance_x*font_scale,1.0*data.window_height,0,1};
     glUniformMatrix4fv(glGetUniformLocation(shader, "char_screen"), 1, GL_FALSE, value);
     value[0]=font_scale;
     value[1]=0.0;
@@ -328,8 +307,8 @@ void insert_text_vertex_array(struct text_vertex_array *array,struct text_vertex
 
 void set_size(unsigned int width,unsigned int height, unsigned int shader){
     glViewport(0, 0, width, height);
-    SCR_HEIGHT=height;
-    SCR_WIDTH=width;
+    data.window_height=height;
+    data.window_width=width;
     GLfloat value[16];
     value[0]=2.0/(float)width;
     value[1]=0.0;
@@ -348,8 +327,8 @@ void set_size(unsigned int width,unsigned int height, unsigned int shader){
     value[14]=0.0;
     value[15]=1.0;
     glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, value);
-    width_chars=SCR_WIDTH/width;
-    height_chars=SCR_HEIGHT/height;
+    //width_chars=SCR_WIDTH/width;
+    //height_chars=SCR_HEIGHT/height;
 }
 
 void character_callback(GLFWwindow* window, unsigned int codepoint){
@@ -358,7 +337,6 @@ void character_callback(GLFWwindow* window, unsigned int codepoint){
             glfwSetWindowShouldClose(window, 1);
             break;
         default:
-            *(current_location++)=(char)codepoint;
 
         break;
     }
