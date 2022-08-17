@@ -19,7 +19,7 @@ int freetype_init(){
     return 0;
 }
 
-int freetype_load_font(char *name,struct font_info *info,int (*setup)(int w, int h),int (*per_glyph)(FT_GlyphSlot g,int x, int y)){
+int freetype_load_font(char *name,struct global_data *data,int (*setup)(int w, int h),int (*per_glyph)(FT_GlyphSlot g,int x, int y)){
     FT_Face face;
     int w;
     int h;
@@ -29,6 +29,7 @@ int freetype_load_font(char *name,struct font_info *info,int (*setup)(int w, int
     FT_GlyphSlot g;
 
     x=0;
+    w=0;
     if (name[0]=='0')
     {
         fprintf(stderr,"ERROR::FREETYPE: Failed to load font_name\n");
@@ -42,7 +43,7 @@ int freetype_load_font(char *name,struct font_info *info,int (*setup)(int w, int
     }
     else {
         // set size to load glyphs as
-        FT_Set_Pixel_Sizes(face, 0, info->orig_font_size);
+        FT_Set_Pixel_Sizes(face, 0, data->font_info.orig_font_size);
 
         // disable byte-alignment restriction
         //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -67,13 +68,13 @@ int freetype_load_font(char *name,struct font_info *info,int (*setup)(int w, int
         }
         h = max_below + max_above;
 
-        info->atlas_width = w;
-        info->atlas_height=h;
+        data->font_info.atlas_width = w;
+        data->font_info.atlas_height=h;
 
         (*setup)(w,h);
 
         for(int i = 32; i < 128; i++) {
-            struct character * ch = info->characters+i;
+            struct character * ch = data->font_info.characters+i;
             if(FT_Load_Char(face, i, FT_LOAD_RENDER)){
                 fprintf(stderr,"failed:%c\n",i);
                 continue;
@@ -82,9 +83,9 @@ int freetype_load_font(char *name,struct font_info *info,int (*setup)(int w, int
 
             ch->tx = x;
             x += g->advance.x>>6;
-            //printf("width:%f,height:%f\n",info->characters[i].bw,info->characters[i].bh);
+            //printf("width:%f,height:%f\n",data->font_info.characters[i].bw,data->font_info.characters[i].bh);
         }
-        info->advance_x=g->advance.x>>6;
+        data->font_info.advance_x=g->advance.x>>6;
 
     }
     // destroy FreeType once we're finished

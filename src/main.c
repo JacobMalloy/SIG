@@ -3,43 +3,18 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include "definitions.h"
+#include "virt_screen.h"
+#include "terminal.h"
 #include <stdint.h>
 
 
 #include "shader.h"
 
-#include "bucket_array.h"
 #include "font.h"
 
 
 
-struct text_vertex{
-    float r;
-    float g;
-    float b;
-    float bg_r;
-    float bg_g;
-    float bg_b;
-    float tx_offset;
-};
 
-struct text_data{
-    uint32_t character;
-    struct{
-            struct{
-                uint32_t fg_red:8;
-                uint32_t fg_green:8;
-                uint32_t fg_blue:8;
-                uint32_t fg_flags:8;
-            };
-            struct{
-                uint32_t bg_red:8;
-                uint32_t bg_green:8;
-                uint32_t bg_blue:8;
-                uint32_t bg_flags:8;
-            };
-    };
-};
 
 struct text_vertex_array{
     struct text_vertex *data;
@@ -47,16 +22,7 @@ struct text_vertex_array{
     int size;
 };
 
-struct line_struct{
-    struct text_vertex *vertex_array;
-    struct text_data *data_array;
-    int length;
-    int size;
-    struct{
-        uint32_t dirty:1;
-        uint32_t wrapped:1;
-    };
-};
+
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -71,8 +37,6 @@ int font_setup_texture_callback(int w, int h);
 
 
 struct global_data data;
-unsigned int width_chars;
-unsigned int height_chars;
 
 GLuint font_tex;
 
@@ -82,11 +46,9 @@ float font_scale;
 unsigned int shader;
 
 
-struct font_info my_font_info;
 unsigned int VAO, VBO;
 static struct text_vertex_array my_text_vertex_array;
 //extern GLFWwindow* window;
-
 
 
 int main()
@@ -94,8 +56,7 @@ int main()
     data.window_width=800;
     data.window_height=600;
 
-    my_font_info.orig_font_size=orig_font_size;
-    //bucket_array_t virtual_screen = bucket_array_make( 64,struct line_struct );
+    data.font_info.orig_font_size=orig_font_size;
     font_scale = 1.0*font_size/orig_font_size;
     initialize_text_vertex_array(&my_text_vertex_array);
     // glfw: initialize and configure
@@ -129,18 +90,18 @@ int main()
     set_size(data.window_width,data.window_height,shader);
 
 
-    my_font_info.characters = malloc(sizeof(struct character)*128);
+    data.font_info.characters = malloc(sizeof(struct character)*128);
     // All functions return a value different than 0 whenever an error occurred
     if(freetype_init()){
         return -1;
     }
     char * font_name = "victormono.ttf";
-    if (freetype_load_font(font_name,&my_font_info,&font_setup_texture_callback,&font_per_texture_callback)){
+    if (freetype_load_font(font_name,&data,&font_setup_texture_callback,&font_per_texture_callback)){
         return -1;
     }
 
 
-    float value[16]={my_font_info.advance_x*font_scale,0,0,0,0,-1.0*my_font_info.atlas_height*font_scale,0,0,0,0,1.0,0,-1.0*my_font_info.advance_x*font_scale,1.0*data.window_height,0,1};
+    float value[16]={data.font_info.advance_x*font_scale,0,0,0,0,-1.0*data.font_info.atlas_height*font_scale,0,0,0,0,1.0,0,-1.0*data.font_info.advance_x*font_scale,1.0*data.window_height,0,1};
     glUniformMatrix4fv(glGetUniformLocation(shader, "char_screen"), 1, GL_FALSE, value);
     value[0]=font_scale;
     value[1]=0.0;
@@ -159,9 +120,10 @@ int main()
     value[14]=0.0;
     value[15]=1.0;
     glUniformMatrix4fv(glGetUniformLocation(shader, "scale_matrix"), 1, GL_FALSE, value);
-    glUniform1f(glGetUniformLocation(shader, "advance_x"), (float)my_font_info.advance_x);
-    glUniform1f(glGetUniformLocation(shader, "atlas_height"), (float)my_font_info.atlas_height);
+    glUniform1f(glGetUniformLocation(shader, "advance_x"), (float)data.font_info.advance_x);
+    glUniform1f(glGetUniformLocation(shader, "atlas_height"), (float)data.font_info.atlas_height);
     glUniform1f(glGetUniformLocation(shader, "bg_alpha"), 0.6);
+
 
     // configure VAO/VBO for texture quads
     // -----------------------------------
@@ -181,10 +143,14 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+    set_size(data.window_width,data.window_height,shader);
     struct text_vertex *array;
-    array= malloc(sizeof(struct text_vertex)*300);
+    array = malloc(sizeof(struct text_vertex)*data.width_chars*data.height_chars);
     // render loop
     // -----------
+
+    init_virtual_screen(&data);
+    start_terminal();
     while (!glfwWindowShouldClose(window))
     {
         // input
@@ -193,7 +159,7 @@ int main()
 
         // render
         // ------
-        glClearColor(0.0f, 0.9f, 0.9f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -204,29 +170,18 @@ int main()
         glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(VAO);
 
-        for(int i = 0 ; i<300;i++){
-            array[i].r=1;
-            array[i].g=1;
-            array[i].b=1;
-            array[i].bg_r=0;
-            array[i].bg_g=0;
-            array[i].bg_b=0;
-            array[i].tx_offset=0.0;
-        }
+        process_terminal(&data);
+        fill_vertex_array(array,&data);
 
-        RenderText(shader, "Testing green", 0.0f, 1.0f, 0.0f,array);
-        RenderText(shader, "testing red", 1.0f, 0.0f, 0.0f,array+100);
-        RenderText(shader, "Hello world", 0.0f, 0.0f, 0.8f,array+200);
         //RenderText(shader, output, 1.0f, 6.0f, 247.0/255.0, 127.0/255.0, 0.0f);
         glBindTexture(GL_TEXTURE_2D, font_tex);
         // update content of VBO memory
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferSubData(GL_ARRAY_BUFFER,0, sizeof(struct text_vertex) * 300, array);
+        glBufferSubData(GL_ARRAY_BUFFER,0, sizeof(struct text_vertex)*data.width_chars*data.height_chars, array);
         //glBufferSubData(GL_ARRAY_BUFFER, 0, my_float_array.length*sizeof(float), my_float_array.data); // be sure to use glBufferSubData and not glBufferData
-
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         // render quad
-        glDrawArrays(GL_POINTS, 0, 300);
+        glDrawArrays(GL_POINTS, 0, data.width_chars*data.height_chars);
         glBindVertexArray(0);
         //glBindTexture(GL_TEXTURE_2D, 0);
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -259,33 +214,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 // render line of text
 // -------------------
-void RenderText(unsigned int shader, char* text, float color_r,float color_g,float color_b, struct text_vertex* array)
-{
 
-    int x = 1;
-    // iterate through all characters
-    char * c;
-    for (c = text; *c != '\0'; c++)
-    {
-        struct character* ch = &my_font_info.characters[(int)*c];
-        //struct text_vertex vert;
-
-        array[x].r=color_r;
-        array[x].g=color_g;
-        array[x].b=color_b;
-        array[x].bg_r=0;
-        array[x].bg_g=0;
-        array[x].bg_b=0;
-        array[x].tx_offset=ch->tx;
-        //insert_text_vertex_array(&my_text_vertex_array,&vert);
-
-        // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
-        x ++; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
-    }
-    // render glyph texture over quad
-
-
-}
 
 
 
@@ -327,17 +256,26 @@ void set_size(unsigned int width,unsigned int height, unsigned int shader){
     value[14]=0.0;
     value[15]=1.0;
     glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, value);
-    //width_chars=SCR_WIDTH/width;
-    //height_chars=SCR_HEIGHT/height;
+    data.width_chars=width/data.font_info.advance_x;
+    data.height_chars=height/data.font_info.atlas_height;
+    glUniform1i(glGetUniformLocation(shader, "width_chars"), data.width_chars);
 }
 
 void character_callback(GLFWwindow* window, unsigned int codepoint){
+    struct text_data tmp_data;
     switch(codepoint){
         case GLFW_KEY_ESCAPE:
             glfwSetWindowShouldClose(window, 1);
             break;
         default:
-
+            tmp_data.character =codepoint;
+            tmp_data.fg_red=0;
+            tmp_data.fg_green=0;
+            tmp_data.fg_blue=0;
+            tmp_data.bg_red=255;
+            tmp_data.bg_green=105;
+            tmp_data.bg_blue=180;
+            set_character(1,0,&tmp_data,&data);
         break;
     }
 }

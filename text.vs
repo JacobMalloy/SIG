@@ -8,6 +8,7 @@ out vec3 textColor;
 
 
 uniform mat4 char_screen;
+uniform int width_chars;
 
 out VS_OUT {
     float TexCoords;
@@ -20,5 +21,5 @@ void main()
     vs_out.textColor=textColor_in;
     vs_out.TexCoords=TexCoords_in;
     vs_out.bg_textColor=bg_textColor_in;
-    gl_Position = (vec4((char_screen * vec4(gl_VertexID%100,gl_VertexID/100+1, 0.0, 1.0)).xy,0.0,0.0) );
+    gl_Position = (vec4((char_screen * vec4(gl_VertexID%width_chars+1,gl_VertexID/width_chars+1, 0.0, 1.0)).xy,0.0,0.0) );
 }
