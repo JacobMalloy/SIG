@@ -150,7 +150,9 @@ int main()
     // -----------
 
     init_virtual_screen(&data);
-    start_terminal();
+    if(start_terminal()){
+        return -1;
+    }
     while (!glfwWindowShouldClose(window))
     {
         // input
@@ -262,20 +264,12 @@ void set_size(unsigned int width,unsigned int height, unsigned int shader){
 }
 
 void character_callback(GLFWwindow* window, unsigned int codepoint){
-    struct text_data tmp_data;
     switch(codepoint){
         case GLFW_KEY_ESCAPE:
             glfwSetWindowShouldClose(window, 1);
             break;
         default:
-            tmp_data.character =codepoint;
-            tmp_data.fg_red=0;
-            tmp_data.fg_green=0;
-            tmp_data.fg_blue=0;
-            tmp_data.bg_red=255;
-            tmp_data.bg_green=105;
-            tmp_data.bg_blue=180;
-            set_character(1,0,&tmp_data,&data);
+
         break;
     }
 }
