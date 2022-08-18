@@ -256,8 +256,8 @@ void set_size(unsigned int width,unsigned int height, unsigned int shader){
     value[14]=0.0;
     value[15]=1.0;
     glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, value);
-    data.width_chars=width/data.font_info.advance_x;
-    data.height_chars=height/data.font_info.atlas_height;
+    data.width_chars=safe_div(width,data.font_info.advance_x);
+    data.height_chars=safe_div(height,data.font_info.atlas_height);
     glUniform1i(glGetUniformLocation(shader, "width_chars"), data.width_chars);
 }
 

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <pty.h>
 #include "terminal.h"
 int master_fd;
 int slave_fd;
@@ -14,16 +15,16 @@ int start_terminal(){
 
     //pipe(to_terminal);
     if(openpty(&master_fd,&slave_fd,NULL,NULL,&ws))
-    flags = fcntl(from_terminal[0],F_GETFL);
-    flags = fcntl(from_terminal[0],F_SETFL,flags|O_NONBLOCK);
+    flags = fcntl(master_fd,F_GETFL);
+    flags = fcntl(master_fd,F_SETFL,flags|O_NONBLOCK);
     if(!fork()){
-        dup2(from_terminal[1],1);
+        dup2(slave_fd,1);
         //dup2(from_terminal[1],2);
         //close(from_terminal[1]);
         execlp("sh","sh",NULL);
         exit(1);
     }
-    close(from_terminal[1]);
+    //close:
     return 0;
 }
 
@@ -41,7 +42,7 @@ int process_terminal(struct global_data *global){
     tmp_data.bg_green=255;
     tmp_data.bg_blue=255;
 
-    n = read(from_terminal[0],buffer,4096);
+    n = read(master_fd,buffer,4096);
     if(n<=0){
         //perror("fuck");
     }

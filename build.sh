@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 INCLUDE_FLAGS="$(pkg-config freetype2 --cflags) -Iglad/include"
-LIB_FLAGS="$(pkg-config freetype2 --libs) -ldl"
+LIB_FLAGS="$(pkg-config freetype2 --libs) -ldl -lutil"
 
 
 

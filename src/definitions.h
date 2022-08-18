@@ -2,6 +2,11 @@
 #define __DEFINITIONS_H__
 #include <stdint.h>
 
+#define safe_div(a,b)           \
+    ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _b==0 ? 0 : _a/_b; })
+
 struct character {
 
     int tx; // x offset of glyph in texture coordinates
