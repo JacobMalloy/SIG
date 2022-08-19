@@ -2,7 +2,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
+
+#ifdef __APPLE__
 #include <util.h>
+#else
+#include <pty.h>
+#include <utmp.h>
+#endif
+
 #include "terminal.h"
 int master_fd;
 int slave_fd;
