@@ -25,6 +25,7 @@ struct global_data{
     int window_height;
     int width_chars;
     int height_chars;
+    int master_fd;
 };
 
 struct text_vertex{
