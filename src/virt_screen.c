@@ -89,6 +89,12 @@ int set_character_cursor(struct text_data *td, struct global_data *data){
 
 
 int set_cursor(int x, int y){
+    if(x<0){
+        x=cursor_x;
+    }
+    if(y<0){
+        y=cursor_y;
+    }
     cursor_x=x;
     cursor_y=y;
     return 0;
