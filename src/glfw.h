@@ -6,7 +6,7 @@
 
 static GLFWwindow* window;
 
-int glfw_init(struct global_data *data,void(*framebuffer_size_callback)(GLFWwindow *,int,int),void(*character_callback)(GLFWwindow *,unsigned int)){
+int glfw_init(struct global_data *data,void(*framebuffer_size_callback)(GLFWwindow *,int,int),void(*character_callback)(GLFWwindow *,unsigned int),void (*key_callback)(GLFWwindow *,int,int,int,int)){
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -33,6 +33,7 @@ int glfw_init(struct global_data *data,void(*framebuffer_size_callback)(GLFWwind
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCharCallback(window, character_callback);
+    glfwSetKeyCallback(window, key_callback);
     return 0;
 }
 

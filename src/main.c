@@ -6,6 +6,7 @@
 #include "virt_screen.h"
 #include "terminal.h"
 #include <stdint.h>
+#include <unistd.h>
 
 
 #include "shader.h"
@@ -24,7 +25,7 @@ struct text_vertex_array{
 
 
 
-
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void character_callback(GLFWwindow* window, unsigned int codepoint);
 void processInput(GLFWwindow *window);
@@ -61,7 +62,7 @@ int main()
     initialize_text_vertex_array(&my_text_vertex_array);
     // glfw: initialize and configure
     // ------------------------------
-    if(glfw_init(&data, &framebuffer_size_callback,&character_callback)){
+    if(glfw_init(&data, &framebuffer_size_callback,&character_callback,&key_callback)){
         return -1;
     }
 
@@ -264,13 +265,29 @@ void set_size(unsigned int width,unsigned int height, unsigned int shader){
 }
 
 void character_callback(GLFWwindow* window, unsigned int codepoint){
-    switch(codepoint){
+    char tmp_char = (char)codepoint;
+    write(data.master_fd,&tmp_char,1);
+}
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
+    char tmp_char;
+    if(!(action & (GLFW_PRESS | GLFW_REPEAT))){
+        return;
+    }
+    switch(key){
         case GLFW_KEY_ESCAPE:
             glfwSetWindowShouldClose(window, 1);
             break;
+        case GLFW_KEY_BACKSPACE:
+            tmp_char = '\b';
+            write(data.master_fd,&tmp_char,1);
+            break;
+        case GLFW_KEY_ENTER:
+            tmp_char = '\n';
+            write(data.master_fd,&tmp_char,1);
+            break;
         default:
-
-        break;
+            break;
     }
 }
 
