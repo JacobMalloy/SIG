@@ -302,10 +302,11 @@ int font_setup_texture_callback(int w, int h){
     glGenTextures(1, &font_tex);
     glBindTexture(GL_TEXTURE_2D, font_tex);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    char * tmp = malloc(w*h);
-    memset(tmp,0,w*h);
+//    char * tmp = malloc(w*h);
+//    memset(tmp,0,w*h);
+    char * tmp=NULL;
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE,tmp);
-    free(tmp);
+//    free(tmp);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
