@@ -150,7 +150,7 @@ int main()
     // -----------
 
     init_virtual_screen(&data);
-    if(start_terminal()){
+    if(start_terminal(&data)){
         return -1;
     }
     while (!glfwWindowShouldClose(window))
