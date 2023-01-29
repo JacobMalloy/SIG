@@ -26,8 +26,17 @@ int start_terminal(struct global_data *data){
     }
     flags = fcntl(data->master_fd,F_GETFL);
     fcntl(data->master_fd,F_SETFL,flags|O_NONBLOCK);
+
+
     if(!fork()){
         close(data->master_fd);
+        setsid();
+
+        if(ioctl(slave_fd,TIOCSCTTY,NULL)==-1){
+            perror("ioctl(TIOCSCTTY)");
+            exit(1);
+        }
+
         login_tty(slave_fd);
         //dup2(from_terminal[1],2);
         //close(from_terminal[1]);
