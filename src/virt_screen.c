@@ -1,6 +1,26 @@
 #include "virt_screen.h"
 
-bucket_array_t virtual_screen;
+struct line_array{
+    struct text_data *data;
+    int size;
+    int index;
+};
+
+
+struct circle_array{
+    struct line_array **data;
+    int size;
+    int index;
+};
+
+void initialize_circle_array(struct circle_array *array,int size);
+void destroy_circle_array(struct circle_array *array);
+
+struct line_array *push_back_circle_array(struct circle_array *array);
+
+
+
+
 int scroll_back;
 int cursor_x;
 int cursor_y;
