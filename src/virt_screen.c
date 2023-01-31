@@ -1,5 +1,9 @@
 #include "virt_screen.h"
 
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
 struct line_array{
     struct text_data *data;
     int size;
@@ -8,15 +12,59 @@ struct line_array{
 
 
 struct circle_array{
-    struct line_array **data;
+    struct line_array *data;
     int size;
     int index;
 };
 
-void initialize_circle_array(struct circle_array *array,int size);
-void destroy_circle_array(struct circle_array *array);
+void initialize_line_array(struct line_array *la,int size){
+    la->data=malloc(sizeof(struct line_array)*size);
+    la->size = size;
+    la->index=0;
+}
 
-struct line_array *push_back_circle_array(struct circle_array *array);
+void destroy_line_array(struct line_array *la){
+    la->size=0;
+    la->index=0;
+    if(la->data){
+        free(la->data);
+    }
+    la->data=NULL;
+}
+
+void push_back_line_array(struct line_array *la,struct text_data *data){
+    if(la->data){
+        la->size=60;
+        la->data=malloc(sizeof(struct text_data)*la->size);
+        la->index=-1;
+    }
+    la->index+=1;
+    if(la->index >= la->size){
+        la->size = la->size*3/2;
+        la->data=realloc(la->data,sizeof(struct text_data)*la->size);
+    }
+    memcpy(&la->data[la->index],data,sizeof(struct text_data));
+}
+
+void initialize_circle_array(struct circle_array *array,int size){
+    array->size=size;
+    array->index=0;
+    array->data=malloc(sizeof(struct line_array)*size);
+    memset(array->data,0,sizeof(struct line_array)*size);
+}
+void destroy_circle_array(struct circle_array *array){
+    for(int i=0;i<array->size;i++){
+        destroy_line_array(array->data[i]);
+    }
+    free(array->data);
+    array->data=0;
+}
+
+int push_back_circle_array(struct circle_array *array){
+    array->index+=1;
+    array->index%=array->size;
+    return array->index;
+}
 
 
 
@@ -27,22 +75,19 @@ int cursor_y;
 
 
 static int create_empty_text_data_array(struct line_struct *in_line){
-    struct text_data *return_value = in_line->data_array;
-    if(return_value == NULL || in_line->length==0){
-        return 1;
-    }
-    return_value->character=32;
-    return_value->fg_red=255;
-    return_value->fg_green=255;
-    return_value->fg_blue=255;
-    return_value->fg_flags=0;
-    return_value->bg_red=0;
-    return_value->bg_green=0;
-    return_value->bg_blue=0;
-    return_value->bg_flags=0;
-    for(int i =1;i<in_line->length;i++){
-        memcpy(return_value+i,return_value,sizeof(struct text_data));
-    }
+    #if 0
+
+    struct text_data return_value;
+    return_value.character=32;
+    return_value.fg_red=255;
+    return_value.fg_green=255;
+    return_value.fg_blue=255;
+    return_value.fg_flags=0;
+    return_value.bg_red=0;
+    return_value.bg_green=0;
+    return_value.bg_blue=0;
+    return_value.bg_flags=0;
+    #endif
     return 0;
 }
 

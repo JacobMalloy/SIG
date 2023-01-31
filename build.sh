@@ -12,4 +12,4 @@ fi
 
 LIB_FLAGS="${LIB_FLAGS} ${GL_LIB}"
 
-gcc -g ${INCLUDE_FLAGS} -Wall -Werror -o SIG src/*.c ${LIB_FLAGS}
+gcc -g ${INCLUDE_FLAGS} -Wall -Wextra -o SIG src/*.c ${LIB_FLAGS}
